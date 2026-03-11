@@ -1,0 +1,315 @@
+<!-- src/app/features/cashier/pos/pos.component.html -->
+<div class="pos-layout">
+  <app-navbar></app-navbar>
+  <app-sidebar></app-sidebar>
+
+  <main class="pos-content">
+    <div class="pos-container">
+      <!-- Header -->
+      <div class="pos-header">
+        <h1>Punto de Venta</h1>
+        <p>Selecciona productos y procesa la venta</p>
+      </div>
+
+      <!-- Mensajes -->
+      <div *ngIf="successMessage" class="alert alert-success">
+        {{ successMessage }}
+      </div>
+      <div *ngIf="error" class="alert alert-error">
+        {{ error }}
+      </div>
+
+      <div class="pos-grid">
+        <!-- Columna Izquierda: Productos -->
+        <div class="products-section">
+          <!-- Filtros -->
+          <div class="search-bar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="filterProducts()"
+              placeholder="Buscar productos..."
+              class="search-input"
+            />
+          </div>
+
+          <!-- Categorías -->
+          <div class="categories">
+            <button
+              class="category-chip"
+              [class.active]="selectedCategory === ''"
+              (click)="selectedCategory = ''; filterProducts()"
+            >
+              Todos
+            </button>
+            <button
+              *ngFor="let cat of categories"
+              class="category-chip"
+              [class.active]="selectedCategory === cat"
+              (click)="selectedCategory = cat; filterProducts()"
+            >
+              {{ cat }}
+            </button>
+          </div>
+
+          <!-- Loading -->
+          <div *ngIf="loading" class="loading-state">
+            <div class="spinner"></div>
+            <p>Cargando productos...</p>
+          </div>
+
+          <!-- Grid de Productos -->
+          <div *ngIf="!loading" class="products-grid">
+            <div
+              *ngFor="let product of filteredProducts"
+              class="product-card"
+              (click)="addToCart(product)"
+            >
+              <div class="product-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                </svg>
+              </div>
+              <div class="product-info">
+                <h4>{{ product.descripcion }}</h4>
+                <span class="product-category">{{ product.categoria }}</span>
+              </div>
+              <div class="product-footer">
+                <span class="product-price">{{ formatCurrency(product.precioUnitario) }}</span>
+                <span class="product-stock">Stock: {{ product.cantidadDisponible }}</span>
+              </div>
+            </div>
+
+            <div *ngIf="filteredProducts.length === 0" class="empty-products">
+              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <path d="m21 21-4.35-4.35"></path>
+              </svg>
+              <p>No se encontraron productos</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Columna Derecha: Carrito -->
+        <div class="cart-section">
+          <div class="cart-card">
+            <div class="cart-header">
+              <h3>Carrito de Compras</h3>
+              <span class="cart-count">{{ cartItems.length }} items</span>
+            </div>
+
+            <!-- Items del Carrito -->
+            <div class="cart-items">
+              <div *ngIf="cartItems.length === 0" class="empty-cart">
+                <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="9" cy="21" r="1"></circle>
+                  <circle cx="20" cy="21" r="1"></circle>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <p>El carrito está vacío</p>
+                <span>Agrega productos para continuar</span>
+              </div>
+
+              <div *ngFor="let item of cartItems" class="cart-item">
+                <div class="cart-item-info">
+                  <h5>{{ item.product.descripcion }}</h5>
+                  <span class="item-price">{{ formatCurrency(item.product.precioUnitario) }}</span>
+                </div>
+                <div class="cart-item-actions">
+                  <div class="quantity-controls">
+                    <button class="qty-btn" (click)="decreaseQuantity(item)">-</button>
+                    <span class="qty-value">{{ item.quantity }}</span>
+                    <button class="qty-btn" (click)="increaseQuantity(item)">+</button>
+                  </div>
+                  <div class="item-subtotal">
+                    {{ formatCurrency(item.subtotal) }}
+                  </div>
+                  <button class="remove-btn" (click)="removeFromCart(item)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Totales -->
+            <div *ngIf="cartItems.length > 0" class="cart-footer">
+              <div class="cart-summary">
+                <div class="summary-row">
+                  <span>Subtotal:</span>
+                  <span>{{ formatCurrency(subtotal) }}</span>
+                </div>
+                <div class="summary-row">
+                  <span>IVA (19%):</span>
+                  <span>{{ formatCurrency(iva) }}</span>
+                </div>
+                <div class="summary-row total-row">
+                  <span>Total:</span>
+                  <span>{{ formatCurrency(total) }}</span>
+                </div>
+              </div>
+
+              <!-- Método de Pago -->
+              <div class="payment-method">
+                <label>Método de Pago</label>
+                <select [(ngModel)]="selectedPaymentMethod" class="payment-select" (change)="onPaymentMethodChange()">
+                  <option value="">Selecciona método</option>
+                  <option *ngFor="let method of paymentMethods" [value]="method">
+                    {{ method }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Datos de Tarjeta -->
+              <div *ngIf="requiresCardData()" class="card-data-section">
+                <h4>Datos de la Tarjeta</h4>
+                
+                <div class="card-field">
+                  <label>Número de Tarjeta</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="cardData.numeroTarjeta" 
+                    class="card-input"
+                    placeholder="1234 5678 9012 3456"
+                    maxlength="19"
+                    (input)="formatCardNumber($event)">
+                </div>
+
+                <div class="card-field">
+                  <label>Nombre del Titular</label>
+                  <input 
+                    type="text" 
+                    [(ngModel)]="cardData.nombreTitular" 
+                    class="card-input"
+                    placeholder="JUAN PÉREZ">
+                </div>
+
+                <div class="card-row">
+                  <div class="card-field card-field-small">
+                    <label>CVV</label>
+                    <input 
+                      type="text" 
+                      [(ngModel)]="cardData.codigoSeguridad" 
+                      class="card-input"
+                      placeholder="123"
+                      maxlength="4"
+                      (input)="onCvvInput($event)">
+                  </div>
+                  
+                  <div class="card-field card-field-small">
+                    <label>Mes</label>
+                    <select [(ngModel)]="cardData.mesVencimiento" class="card-select">
+                      <option value="">MM</option>
+                      <option *ngFor="let mes of ['01','02','03','04','05','06','07','08','09','10','11','12']" [value]="mes">{{mes}}</option>
+                    </select>
+                  </div>
+                  
+                  <div class="card-field card-field-small">
+                    <label>Año</label>
+                    <select [(ngModel)]="cardData.anoVencimiento" class="card-select">
+                      <option value="">YYYY</option>
+                      <option *ngFor="let ano of ['2024','2025','2026','2027','2028','2029','2030']" [value]="ano">{{ano}}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botones de Acción -->
+              <div class="cart-actions">
+                <button class="btn-clear" (click)="clearCart()">
+                  Limpiar
+                </button>
+                <button
+                  class="btn-checkout"
+                  (click)="processSale()"
+                  [disabled]="processingPayment || !selectedPaymentMethod"
+                >
+                  <span *ngIf="!processingPayment">Procesar Venta</span>
+                  <span *ngIf="processingPayment" class="processing">
+                    <div class="mini-spinner"></div>
+                    Procesando...
+                  </span>
+                </button>
+              </div>
+
+              <!-- Separador -->
+              <div class="payment-separator">
+                <span>o pagar con</span>
+              </div>
+
+              <!-- Botón de Mercado Pago -->
+              <div class="mercadopago-section">
+                <app-mercadopago-button
+                  [items]="cartItems"
+                  [total]="total"
+                ></app-mercadopago-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal de Confirmación -->
+<div class="modal-overlay" *ngIf="showConfirmModal" (click)="closeConfirmModal()">
+  <div class="modal-content success-modal" (click)="$event.stopPropagation()">
+    <div class="success-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+
+    <h2>¡Venta Procesada!</h2>
+    <p>La venta se ha registrado correctamente</p>
+
+    <div class="invoice-info" *ngIf="generatedInvoice">
+      <div class="invoice-row">
+        <span>Factura #:</span>
+        <strong>{{ generatedInvoice.idFactura }}</strong>
+      </div>
+      <div class="invoice-row">
+        <span>Total:</span>
+        <strong>{{ formatCurrency(generatedInvoice.total) }}</strong>
+      </div>
+      <div class="invoice-row" *ngIf="generatedInvoice.metodoPago">
+        <span>Método de Pago:</span>
+        <strong>{{ generatedInvoice.metodoPago }}</strong>
+      </div>
+      <!-- Datos del comprador/titular (solo para tarjetas) -->
+      <div class="customer-info" *ngIf="generatedInvoice.nombreTitular">
+        <div class="invoice-row">
+          <span>Titular:</span>
+          <strong>{{ generatedInvoice.nombreTitular }}</strong>
+        </div>
+        <div class="invoice-row" *ngIf="generatedInvoice.numeroTarjetaEnmascarado">
+          <span>Tarjeta:</span>
+          <strong>{{ generatedInvoice.numeroTarjetaEnmascarado }}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-secondary" (click)="downloadInvoicePdf()" *ngIf="generatedInvoice">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14,2 14,8 20,8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+          <polyline points="10,9 9,9 8,9"></polyline>
+        </svg>
+        Descargar PDF
+      </button>
+      <button class="btn-primary" (click)="closeConfirmModal()">
+        Aceptar
+      </button>
+    </div>
+  </div>
+</div>
