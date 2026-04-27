@@ -3,10 +3,11 @@ package com.sistemaventas.backend.controller;
 import com.sistemaventas.backend.dto.request.ProductoRequest;
 import com.sistemaventas.backend.dto.request.VentaRequest;
 import com.sistemaventas.backend.dto.response.VentaResponse;
-import com.sistemaventas.backend.entity.Producto;
+import com.sistemaventas.backend.domain.model.Producto;
+import com.sistemaventas.backend.domain.ports.in.CrearProductoUseCase;
 import com.sistemaventas.backend.facade.VentasFacade;
-import com.sistemaventas.backend.service.ProductoService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,12 +21,16 @@ import java.util.Map;
 @RequestMapping("/api/patrones")
 @CrossOrigin(origins = "http://localhost:4200")
 public class PatronesController {
-    
-    @Autowired
-    private ProductoService productoService;
-    
-    @Autowired
-    private VentasFacade ventasFacade;
+
+    private static final Logger log = LoggerFactory.getLogger(PatronesController.class);
+
+    private final CrearProductoUseCase productoUseCase;
+    private final VentasFacade ventasFacade;
+
+    public PatronesController(CrearProductoUseCase productoUseCase, VentasFacade ventasFacade) {
+        this.productoUseCase = productoUseCase;
+        this.ventasFacade = ventasFacade;
+    }
     
     /**
      * GET /api/patrones/demo-completa
@@ -36,21 +41,16 @@ public class PatronesController {
         Map<String, Object> resultado = new HashMap<>();
         
         try {
-            System.out.println("🎯 === DEMOSTRACIÓN COMPLETA DE PATRONES DE DISEÑO ===");
-            
-            // 1. PATRÓN FACTORY METHOD
+            log.info("Iniciando demostración completa de patrones de diseño");
+
             resultado.put("factory_pattern", demostrarFactoryMethod());
-            
-            // 2. PATRÓN OBSERVER  
             resultado.put("observer_pattern", demostrarObserverPattern());
-            
-            // 3. PATRÓN FACADE
             resultado.put("facade_pattern", demostrarFacadePattern());
-            
+
             resultado.put("estado", "EXITOSO");
             resultado.put("mensaje", "Demostración completa de los 3 patrones ejecutada correctamente");
-            
-            System.out.println("🎉 === DEMOSTRACIÓN COMPLETA FINALIZADA ===");
+
+            log.info("Demostración completa finalizada");
             
             return ResponseEntity.ok(resultado);
             
@@ -125,13 +125,7 @@ public class PatronesController {
     @PostMapping("/venta-completa")
     public ResponseEntity<VentaResponse> ventaCompletaConPatrones(@RequestBody VentaRequest ventaRequest) {
         try {
-            System.out.println("🛒 === PROCESANDO VENTA CON TODOS LOS PATRONES ===");
-            
-            // Esto usa automáticamente:
-            // - Factory Method (si se crean productos nuevos)
-            // - Observer (para notificaciones de stock)
-            // - Facade (para coordinar toda la operación)
-            
+            log.info("Procesando venta con todos los patrones");
             VentaResponse response = ventasFacade.procesarVenta(ventaRequest);
             
             return ResponseEntity.ok(response);
@@ -146,12 +140,11 @@ public class PatronesController {
     // MÉTODOS PRIVADOS PARA CADA PATRÓN
     // ==========================================
     
-    @SuppressWarnings("UnnecessaryTemporaryOnConversionFromString")
     private Map<String, Object> demostrarFactoryMethod() {
         Map<String, Object> resultado = new HashMap<>();
         List<Map<String, Object>> productosCreados = new ArrayList<>();
-        
-        System.out.println("🏭 DEMOSTRANDO FACTORY METHOD PATTERN:");
+
+        log.info("Demostrando Factory Method Pattern");
         
         try {
             // Crear productos usando diferentes factories
@@ -170,18 +163,16 @@ public class PatronesController {
                 request.setCantidadDisponible(Integer.parseInt(prod[2]));
                 request.setCategoria(prod[3]);
                 
-                Producto productoCreado = productoService.crearProducto(request);
+                Producto productoCreado = productoUseCase.crearProducto(request);
                 
                 Map<String, Object> prodInfo = new HashMap<>();
-                prodInfo.put("id", productoCreado.getIdProducto());
+                prodInfo.put("id", productoCreado.getId());
                 prodInfo.put("descripcion", productoCreado.getDescripcion());
                 prodInfo.put("categoria", productoCreado.getCategoria());
                 prodInfo.put("precio", productoCreado.getPrecioUnitario());
                 prodInfo.put("factory_usado", prod[3] + "ProductoFactory");
-                
                 productosCreados.add(prodInfo);
-                
-                System.out.println("   ✓ " + prod[3] + "Factory creó: " + productoCreado.getDescripcion());
+                log.debug("{}Factory creó: {}", prod[3], productoCreado.getDescripcion());
             }
             
             resultado.put("patron", "Factory Method");
@@ -199,8 +190,8 @@ public class PatronesController {
     
     private Map<String, Object> demostrarObserverPattern() {
         Map<String, Object> resultado = new HashMap<>();
-        
-        System.out.println("👁️ DEMOSTRANDO OBSERVER PATTERN:");
+
+        log.info("Demostrando Observer Pattern");
         
         try {
             // Simular cambios de stock que activarán observers
@@ -211,7 +202,7 @@ public class PatronesController {
             
             for (int i = 0; i < productosAModificar.length; i++) {
                 try {
-                    Producto productoActualizado = productoService.actualizarStock(
+                    Producto productoActualizado = productoUseCase.actualizarStock(
                             productosAModificar[i], 
                             nuevasCantidades[i]
                     );
@@ -223,12 +214,9 @@ public class PatronesController {
                     cambio.put("observadores_notificados", "EmailObserver, ReporteObserver, PushObserver");
                     
                     cambiosRealizados.add(cambio);
-                    
-                    System.out.println("   ✓ Stock actualizado para: " + productoActualizado.getDescripcion() + 
-                                     " -> " + nuevasCantidades[i] + " (Observadores notificados)");
-                    
+                    log.debug("Stock actualizado para '{}' -> {}", productoActualizado.getDescripcion(), nuevasCantidades[i]);
                 } catch (Exception e) {
-                    System.out.println("   ⚠️ No se pudo actualizar producto ID " + productosAModificar[i]);
+                    log.warn("No se pudo actualizar producto ID {}", productosAModificar[i]);
                 }
             }
             
@@ -247,8 +235,8 @@ public class PatronesController {
     
     private Map<String, Object> demostrarFacadePattern() {
         Map<String, Object> resultado = new HashMap<>();
-        
-        System.out.println("🏢 DEMOSTRANDO FACADE PATTERN:");
+
+        log.info("Demostrando Facade Pattern");
         
         try {
             // Crear una venta que demuestre el facade coordinando múltiples servicios
@@ -276,13 +264,11 @@ public class PatronesController {
             resultado.put("total_venta", response.getTotal());
             resultado.put("metodo_pago", response.getMetodoPago());
             resultado.put("estado", response.getEstado());
-            
-            System.out.println("   ✓ Facade coordinó 5 servicios para procesar venta ID: " + response.getIdFactura());
-            
+            log.debug("Facade coordinó venta ID: {}", response.getIdFactura());
         } catch (Exception e) {
             resultado.put("estado", "ERROR");
             resultado.put("error", e.getMessage());
-            System.out.println("   ❌ Error en Facade: " + e.getMessage());
+            log.error("Error en Facade: {}", e.getMessage());
         }
         
         return resultado;

@@ -1,51 +1,50 @@
 package com.sistemaventas.backend.observer;
 
-import com.sistemaventas.backend.entity.Producto;
+import com.sistemaventas.backend.domain.model.Producto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-// ==========================================
-// OBSERVER 3: Notificaciones Push/SMS
-// ==========================================
 @Component
 public class PushNotificationObserver implements InventarioObserver {
-    
+
+    private static final Logger log = LoggerFactory.getLogger(PushNotificationObserver.class);
+
     @Override
     public void onStockChange(Producto producto, int stockAnterior, int nuevoStock) {
-        // Solo notificar cambios significativos
         int diferencia = Math.abs(nuevoStock - stockAnterior);
         if (diferencia >= 10) {
-            System.out.println("📱 [PUSH] Cambio significativo de stock: " + producto.getDescripcion() + 
-                              " (Δ: " + (nuevoStock - stockAnterior) + ")");
+            log.info("[PUSH] Cambio significativo de stock en '{}' (delta: {})",
+                    producto.getDescripcion(), nuevoStock - stockAnterior);
         }
     }
-    
+
     @Override
     public void onStockBajo(Producto producto, int stockActual) {
-        System.out.println("📱 [PUSH ALERTA] Stock bajo en " + producto.getDescripcion() + 
-                          " (" + stockActual + " unidades)");
-        enviarNotificacionPush("Stock Bajo", "⚠️ " + producto.getDescripcion() + " tiene stock bajo");
+        log.warn("[PUSH ALERTA] Stock bajo en '{}' ({} unidades)", producto.getDescripcion(), stockActual);
+        enviarNotificacionPush("Stock Bajo", "Stock bajo en " + producto.getDescripcion());
     }
-    
+
     @Override
     public void onProductoAgotado(Producto producto) {
-        System.out.println("📱 [PUSH CRÍTICO] Producto agotado: " + producto.getDescripcion());
-        enviarNotificacionPush("Producto Agotado", "🚨 " + producto.getDescripcion() + " está agotado");
+        log.warn("[PUSH CRITICO] Producto agotado: '{}'", producto.getDescripcion());
+        enviarNotificacionPush("Producto Agotado", producto.getDescripcion() + " está agotado");
         enviarSMS("Producto agotado: " + producto.getDescripcion());
     }
-    
+
     @Override
     public void onProductoRestockado(Producto producto, int nuevoStock) {
-        System.out.println("📱 [PUSH INFO] ✅ " + producto.getDescripcion() + " restockado (" + nuevoStock + " unidades)");
-        enviarNotificacionPush("Restock Exitoso", "✅ " + producto.getDescripcion() + " disponible nuevamente");
+        log.info("[PUSH INFO] Producto restockado: '{}' ({} unidades)", producto.getDescripcion(), nuevoStock);
+        enviarNotificacionPush("Restock Exitoso", producto.getDescripcion() + " disponible nuevamente");
     }
-    
+
     private void enviarNotificacionPush(String titulo, String mensaje) {
-        System.out.println("   📱 Push → " + titulo + ": " + mensaje);
-        // Aquí iría la integración con Firebase, OneSignal, etc.
+        log.debug("[PUSH] {} — {}", titulo, mensaje);
+        // Integración real: Firebase, OneSignal, etc.
     }
-    
+
     private void enviarSMS(String mensaje) {
-        System.out.println("   📲 SMS → +573187425471: " + mensaje);
-        // Aquí iría la integración con Twilio, AWS SNS, etc.
+        log.debug("[SMS] -> {}", mensaje);
+        // Integración real: Twilio, AWS SNS, etc.
     }
 }

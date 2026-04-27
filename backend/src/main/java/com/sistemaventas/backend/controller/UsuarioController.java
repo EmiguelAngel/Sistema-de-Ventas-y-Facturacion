@@ -3,7 +3,6 @@ package com.sistemaventas.backend.controller;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -17,28 +16,28 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.sistemaventas.backend.domain.model.UsuarioDomain;
+import com.sistemaventas.backend.domain.ports.in.GestionarUsuarioUseCase;
 import com.sistemaventas.backend.entity.Usuario;
-import com.sistemaventas.backend.service.UsuarioService;
 
 import jakarta.validation.Valid;
 
-/**
- * Controller (C in MVC): Endpoints para gestión de usuarios. Recibe solicitudes HTTP
- * relacionadas con usuarios, delega a la capa de servicio y retorna entidades/DTOs.
- */
 @RestController
 @RequestMapping("/api/usuarios")
-@CrossOrigin(origins = "http://localhost:4200") // Para Angular
+@CrossOrigin(origins = "http://localhost:4200")
 public class UsuarioController {
-    
-    @Autowired
-    private UsuarioService usuarioService;
+
+    private final GestionarUsuarioUseCase usuarioUseCase;
+
+    public UsuarioController(GestionarUsuarioUseCase usuarioUseCase) {
+        this.usuarioUseCase = usuarioUseCase;
+    }
     
     // GET /api/usuarios - Obtener todos los usuarios
     @GetMapping
     public ResponseEntity<List<Usuario>> obtenerTodosLosUsuarios() {
         try {
-            List<Usuario> usuarios = usuarioService.obtenerTodosLosUsuarios();
+            List<Usuario> usuarios = usuarioUseCase.obtenerTodos().stream().map(this::toLegacyUsuario).toList();
             return ResponseEntity.ok(usuarios);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -49,7 +48,7 @@ public class UsuarioController {
     @GetMapping("/{id}")
     public ResponseEntity<Usuario> obtenerUsuarioPorId(@PathVariable Integer id) {
         try {
-            Optional<Usuario> usuario = usuarioService.buscarPorId(id);
+            Optional<Usuario> usuario = usuarioUseCase.buscarPorId(id).map(this::toLegacyUsuario);
             if (usuario.isPresent()) {
                 return ResponseEntity.ok(usuario.get());
             } else {
@@ -64,7 +63,10 @@ public class UsuarioController {
     @GetMapping("/correo/{correo}")
     public ResponseEntity<Usuario> obtenerUsuarioPorCorreo(@PathVariable String correo) {
         try {
-            Optional<Usuario> usuario = usuarioService.buscarPorCorreo(correo);
+            Optional<Usuario> usuario = usuarioUseCase.obtenerTodos().stream()
+                    .filter(u -> correo.equalsIgnoreCase(u.getCorreo()))
+                    .findFirst()
+                    .map(this::toLegacyUsuario);
             if (usuario.isPresent()) {
                 return ResponseEntity.ok(usuario.get());
             } else {
@@ -79,7 +81,7 @@ public class UsuarioController {
     @PostMapping
     public ResponseEntity<?> crearUsuario(@Valid @RequestBody Usuario usuario) {
         try {
-            Usuario nuevoUsuario = usuarioService.crearUsuario(usuario);
+            Usuario nuevoUsuario = toLegacyUsuario(usuarioUseCase.crear(toDomainUsuario(usuario)));
             return ResponseEntity.status(HttpStatus.CREATED).body(nuevoUsuario);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -95,7 +97,7 @@ public class UsuarioController {
     public ResponseEntity<?> actualizarUsuario(@PathVariable Integer id, 
                                                @Valid @RequestBody Usuario usuario) {
         try {
-            Usuario usuarioActualizado = usuarioService.actualizarUsuario(id, usuario);
+            Usuario usuarioActualizado = toLegacyUsuario(usuarioUseCase.actualizar(id, toDomainUsuario(usuario)));
             return ResponseEntity.ok(usuarioActualizado);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -110,7 +112,7 @@ public class UsuarioController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> eliminarUsuario(@PathVariable Integer id) {
         try {
-            boolean eliminado = usuarioService.eliminarUsuario(id);
+            boolean eliminado = usuarioUseCase.eliminar(id);
             if (eliminado) {
                 return ResponseEntity.ok().body("Usuario eliminado correctamente");
             } else {
@@ -126,7 +128,10 @@ public class UsuarioController {
     @GetMapping("/rol/{idRol}")
     public ResponseEntity<List<Usuario>> obtenerUsuariosPorRol(@PathVariable Integer idRol) {
         try {
-            List<Usuario> usuarios = usuarioService.buscarPorRol(idRol);
+            List<Usuario> usuarios = usuarioUseCase.obtenerTodos().stream()
+                    .filter(u -> idRol.equals(u.getIdRol()))
+                    .map(this::toLegacyUsuario)
+                    .toList();
             return ResponseEntity.ok(usuarios);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -137,7 +142,11 @@ public class UsuarioController {
     @GetMapping("/buscar")
     public ResponseEntity<List<Usuario>> buscarPorNombre(@RequestParam String nombre) {
         try {
-            List<Usuario> usuarios = usuarioService.buscarPorNombre(nombre);
+            String filtro = nombre.toLowerCase();
+            List<Usuario> usuarios = usuarioUseCase.obtenerTodos().stream()
+                    .filter(u -> u.getNombre() != null && u.getNombre().toLowerCase().contains(filtro))
+                    .map(this::toLegacyUsuario)
+                    .toList();
             return ResponseEntity.ok(usuarios);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
@@ -148,10 +157,10 @@ public class UsuarioController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
         try {
-            Optional<Usuario> usuario = usuarioService.verificarCredenciales(
+            Optional<Usuario> usuario = usuarioUseCase.verificarCredenciales(
                     loginRequest.getCorreo(), 
                     loginRequest.getContrasena()
-            );
+            ).map(this::toLegacyUsuario);
             
             if (usuario.isPresent()) {
                 // Crear respuesta JSON estructurada
@@ -237,5 +246,27 @@ public class UsuarioController {
         
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
+    }
+
+    private Usuario toLegacyUsuario(UsuarioDomain u) {
+        Usuario legacy = new Usuario();
+        legacy.setIdUsuario(u.getId());
+        legacy.setNombre(u.getNombre());
+        legacy.setCorreo(u.getCorreo());
+        legacy.setContrasena(u.getContrasena());
+        legacy.setTelefono(u.getTelefono());
+        legacy.setIdRol(u.getIdRol());
+        return legacy;
+    }
+
+    private UsuarioDomain toDomainUsuario(Usuario u) {
+        UsuarioDomain domain = new UsuarioDomain();
+        domain.setId(u.getIdUsuario());
+        domain.setNombre(u.getNombre());
+        domain.setCorreo(u.getCorreo());
+        domain.setContrasena(u.getContrasena());
+        domain.setTelefono(u.getTelefono());
+        domain.setIdRol(u.getIdRol());
+        return domain;
     }
 }

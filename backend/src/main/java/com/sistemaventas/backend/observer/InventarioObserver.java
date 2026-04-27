@@ -1,8 +1,7 @@
 package com.sistemaventas.backend.observer;
 
-import com.sistemaventas.backend.entity.Producto;
+import com.sistemaventas.backend.domain.model.Producto;
 
-// Observer interface
 public interface InventarioObserver {
     void onStockChange(Producto producto, int stockAnterior, int nuevoStock);
     void onStockBajo(Producto producto, int stockActual);
@@ -10,7 +9,6 @@ public interface InventarioObserver {
     void onProductoRestockado(Producto producto, int nuevoStock);
 }
 
-// Subject interface
 @SuppressWarnings("unused")
 interface InventarioSubject {
     void agregarObservador(InventarioObserver observer);

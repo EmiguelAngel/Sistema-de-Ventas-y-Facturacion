@@ -2,7 +2,6 @@ package com.sistemaventas.backend.controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -19,8 +18,11 @@ public class MercadoPagoController {
 
     private static final Logger logger = LoggerFactory.getLogger(MercadoPagoController.class);
 
-    @Autowired
-    private MercadoPagoService mercadoPagoService;
+    private final MercadoPagoService mercadoPagoService;
+
+    public MercadoPagoController(MercadoPagoService mercadoPagoService) {
+        this.mercadoPagoService = mercadoPagoService;
+    }
 
     @PostMapping("/create-preference")
     public ResponseEntity<?> createPreference(@RequestBody PreferenceDTO request) {

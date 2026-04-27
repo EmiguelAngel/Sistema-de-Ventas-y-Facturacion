@@ -1,68 +1,35 @@
 package com.sistemaventas.backend.observer;
 
-import com.sistemaventas.backend.entity.Producto;
+import com.sistemaventas.backend.domain.model.Producto;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-
-// ==========================================
-// OBSERVER 1: Notificaciones por Email
-// ==========================================
 @Component
 public class EmailNotificationObserver implements InventarioObserver {
-    
-    private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-    
+
+    private static final Logger log = LoggerFactory.getLogger(EmailNotificationObserver.class);
+
     @Override
     public void onStockChange(Producto producto, int stockAnterior, int nuevoStock) {
-        String timestamp = LocalDateTime.now().format(formatter);
-        System.out.println("📧 [EMAIL] " + timestamp + " - Cambio de stock en " + producto.getDescripcion() + 
-                          " (" + stockAnterior + " → " + nuevoStock + ")");
-        
-        // Aquí iría la lógica real para enviar email
-        // Por ejemplo: emailService.sendStockChangeNotification(producto, stockAnterior, nuevoStock);
+        log.info("[EMAIL] Cambio de stock en '{}': {} -> {}", producto.getDescripcion(), stockAnterior, nuevoStock);
     }
-    
+
     @Override
     public void onStockBajo(Producto producto, int stockActual) {
-        String timestamp = LocalDateTime.now().format(formatter);
-        System.out.println("📧 [EMAIL ALERTA] " + timestamp + " - STOCK BAJO: " + producto.getDescripcion() + 
-                          " (Quedan solo " + stockActual + " unidades)");
-        
-        // Enviar email a administradores
-        enviarEmailStockBajo(producto, stockActual);
+        log.warn("[EMAIL ALERTA] Stock bajo: '{}' — quedan {} unidades", producto.getDescripcion(), stockActual);
+        log.info("[EMAIL] Enviando alerta a admin@sistemaventas.com — Asunto: Stock bajo en '{}'",
+                producto.getDescripcion());
     }
-    
+
     @Override
     public void onProductoAgotado(Producto producto) {
-        String timestamp = LocalDateTime.now().format(formatter);
-        System.out.println("📧 [EMAIL CRÍTICO] " + timestamp + " - PRODUCTO AGOTADO: " + producto.getDescripcion());
-        
-        // Enviar email urgente
-        enviarEmailProductoAgotado(producto);
+        log.warn("[EMAIL CRITICO] Producto agotado: '{}'", producto.getDescripcion());
+        log.info("[EMAIL] Enviando alerta URGENTE a admin@sistemaventas.com, compras@sistemaventas.com");
     }
-    
+
     @Override
     public void onProductoRestockado(Producto producto, int nuevoStock) {
-        String timestamp = LocalDateTime.now().format(formatter);
-        System.out.println("📧 [EMAIL INFO] " + timestamp + " - Producto restockado: " + producto.getDescripcion() + 
-                          " (Nuevo stock: " + nuevoStock + ")");
-    }
-    
-    private void enviarEmailStockBajo(Producto producto, int stockActual) {
-        // Simulación de envío de email
-        System.out.println("   📤 Enviando email a: admin@sistemaventas.com");
-        System.out.println("   📝 Asunto: [ALERTA] Stock bajo - " + producto.getDescripcion());
-        System.out.println("   📄 Mensaje: El producto " + producto.getDescripcion() + 
-                          " tiene stock bajo (" + stockActual + " unidades). Considere realizar pedido.");
-    }
-    
-    private void enviarEmailProductoAgotado(Producto producto) {
-        // Simulación de envío de email urgente
-        System.out.println("   🚨 Enviando email URGENTE a: admin@sistemaventas.com, compras@sistemaventas.com");
-        System.out.println("   📝 Asunto: [URGENTE] Producto agotado - " + producto.getDescripcion());
-        System.out.println("   📄 Mensaje: El producto " + producto.getDescripcion() + 
-                          " está completamente agotado. Acción inmediata requerida.");
+        log.info("[EMAIL INFO] Producto restockado: '{}' (nuevo stock: {})", producto.getDescripcion(), nuevoStock);
     }
 }
