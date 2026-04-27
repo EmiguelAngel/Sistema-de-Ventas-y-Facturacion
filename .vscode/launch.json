@@ -3,6 +3,13 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "java",
+      "name": "SistemaVentasBackendApplication",
+      "request": "launch",
+      "mainClass": "com.sistemaventas.backend.SistemaVentasBackendApplication",
+      "projectName": "sistema-ventas-backend"
+    },
+    {
       "name": "ng serve",
       "type": "chrome",
       "request": "launch",
