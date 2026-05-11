@@ -4,19 +4,28 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-/** Entidad JPA para la tabla FACTURA. Usa @GeneratedValue — elimina la generación manual de IDs. */
+/**
+ * Tabla FACTURA en PostgreSQL: {@code idfactura} NOT NULL sin SERIAL/IDENTITY.
+ * Hibernate con {@code @GeneratedValue(IDENTITY)} omite la columna en el INSERT y falla.
+ * Se asigna {@link #idFactura} en {@code VentaRepositoryAdapter} y se usa {@link Persistable}
+ * para que {@code save()} siga haciendo {@code persist} aunque el id ya esté fijado.
+ */
 @Entity
 @Table(name = "FACTURA")
-public class FacturaJpaEntity {
+public class FacturaJpaEntity implements Persistable<Integer> {
+
+    /** Hasta persistir o tras cargar desde BD, Spring Data trata la fila como nueva. */
+    @Transient
+    private boolean sinPersistir = true;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "IDFACTURA")
     private Integer idFactura;
 
@@ -60,6 +69,27 @@ public class FacturaJpaEntity {
     private PagoJpaEntity pago;
 
     public FacturaJpaEntity() { this.fecha = new Date(); }
+
+    @PostLoad
+    private void marcarCargadaDesdeBd() {
+        this.sinPersistir = false;
+    }
+
+    @PostPersist
+    private void marcarPersistida() {
+        this.sinPersistir = false;
+    }
+
+    @JsonIgnore
+    @Override
+    public Integer getId() {
+        return idFactura;
+    }
+
+    @Override
+    public boolean isNew() {
+        return sinPersistir;
+    }
 
     public Integer getIdFactura() { return idFactura; }
     public void setIdFactura(Integer idFactura) { this.idFactura = idFactura; }

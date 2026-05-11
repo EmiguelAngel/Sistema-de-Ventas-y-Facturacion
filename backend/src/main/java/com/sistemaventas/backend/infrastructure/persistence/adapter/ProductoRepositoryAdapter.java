@@ -32,8 +32,19 @@ public class ProductoRepositoryAdapter implements ProductoRepositoryPort {
 
     @Override
     public Producto guardar(Producto producto) {
-        ProductoJpaEntity entity = mapper.toJpaEntity(producto);
-        return mapper.toDomain(jpaRepository.save(entity));
+        if (producto.getId() == null) {
+            ProductoJpaEntity entity = mapper.toJpaEntity(producto);
+            return mapper.toDomain(jpaRepository.save(entity));
+        }
+        // Con ID asignado, JPA hace merge sobre el objeto devuelto por MapStruct.
+        // Ese merge puede poner NULL en columnas NOT NULL (p. ej. CATEGORIA) y fallar el INSERT/UPDATE.
+        ProductoJpaEntity managed = jpaRepository.findById(producto.getId())
+                .orElseThrow(() -> new IllegalStateException("Producto no encontrado: " + producto.getId()));
+        managed.setCantidadDisponible(producto.getCantidadDisponible());
+        managed.setPrecioUnitario(producto.getPrecioUnitario());
+        managed.setDescripcion(producto.getDescripcion());
+        managed.setCategoria(producto.getCategoria());
+        return mapper.toDomain(jpaRepository.save(managed));
     }
 
     @Override

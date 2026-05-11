@@ -1,5 +1,16 @@
 package com.sistemaventas.backend.application.usecase;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.sistemaventas.backend.domain.exception.FacturaNoEncontradaException;
 import com.sistemaventas.backend.domain.exception.ProductoNoEncontradoException;
 import com.sistemaventas.backend.domain.exception.UsuarioNoEncontradoException;
@@ -16,20 +27,10 @@ import com.sistemaventas.backend.domain.ports.out.UsuarioRepositoryPort;
 import com.sistemaventas.backend.domain.ports.out.VentaRepositoryPort;
 import com.sistemaventas.backend.dto.request.VentaRequest;
 import com.sistemaventas.backend.dto.response.VentaResponse;
-import com.sistemaventas.backend.service.FacturaPdfService;
 import com.sistemaventas.backend.infrastructure.persistence.entity.DetalleFacturaJpaEntity;
 import com.sistemaventas.backend.infrastructure.persistence.entity.FacturaJpaEntity;
 import com.sistemaventas.backend.infrastructure.persistence.repository.FacturaJpaRepository;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Optional;
+import com.sistemaventas.backend.service.FacturaPdfService;
 
 /**
  * Caso de Uso — Procesamiento de Ventas.

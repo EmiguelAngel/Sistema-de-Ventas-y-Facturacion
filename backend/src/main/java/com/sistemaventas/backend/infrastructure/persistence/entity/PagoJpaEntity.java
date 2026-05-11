@@ -6,16 +6,19 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import org.springframework.data.domain.Persistable;
 
 import java.math.BigDecimal;
 
-/** Entidad JPA para la tabla PAGO. Usa @GeneratedValue — elimina generación manual. */
+/** PK manual + {@link Persistable} por el mismo motivo que {@link FacturaJpaEntity}. */
 @Entity
 @Table(name = "PAGO")
-public class PagoJpaEntity {
+public class PagoJpaEntity implements Persistable<Integer> {
+
+    @Transient
+    private boolean sinPersistir = true;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "IDPAGO")
     private Integer idPago;
 
@@ -40,6 +43,27 @@ public class PagoJpaEntity {
     private String nombreTitular;
 
     public PagoJpaEntity() {}
+
+    @PostLoad
+    private void marcarCargadaDesdeBd() {
+        this.sinPersistir = false;
+    }
+
+    @PostPersist
+    private void marcarPersistida() {
+        this.sinPersistir = false;
+    }
+
+    @JsonIgnore
+    @Override
+    public Integer getId() {
+        return idPago;
+    }
+
+    @Override
+    public boolean isNew() {
+        return sinPersistir;
+    }
 
     public Integer getIdPago() { return idPago; }
     public void setIdPago(Integer idPago) { this.idPago = idPago; }

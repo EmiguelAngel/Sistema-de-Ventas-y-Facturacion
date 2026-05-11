@@ -8,13 +8,12 @@ import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
 
-/** Entidad JPA para la tabla DETALLEFACTURA. Usa @GeneratedValue — elimina generación manual. */
+/** Igual que FACTURA: PK manual si la columna no es IDENTITY en PostgreSQL. */
 @Entity
 @Table(name = "DETALLEFACTURA")
 public class DetalleFacturaJpaEntity {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "IDDETALLE")
     private Integer idDetalle;
 

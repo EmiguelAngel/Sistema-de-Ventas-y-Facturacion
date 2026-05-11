@@ -25,4 +25,7 @@ public interface FacturaJpaRepository extends JpaRepository<FacturaJpaEntity, In
     BigDecimal sumTotalVentasByFecha(@Param("fecha") Date fecha);
 
     List<FacturaJpaEntity> findAllByOrderByFechaDesc();
+
+    @Query("SELECT COALESCE(MAX(f.idFactura), 0) FROM FacturaJpaEntity f")
+    int findMaxIdFactura();
 }

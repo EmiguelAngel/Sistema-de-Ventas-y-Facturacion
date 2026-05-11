@@ -18,4 +18,7 @@ public interface PagoJpaRepository extends JpaRepository<PagoJpaEntity, Integer>
 
     @Query("SELECT p FROM PagoJpaEntity p WHERE p.factura.idFactura = :idFactura")
     List<PagoJpaEntity> findByFacturaId(@Param("idFactura") Integer idFactura);
+
+    @Query("SELECT COALESCE(MAX(p.idPago), 0) FROM PagoJpaEntity p")
+    int findMaxIdPago();
 }
