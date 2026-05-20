@@ -307,9 +307,92 @@
         </svg>
         Descargar PDF
       </button>
+      <button class="btn-factus" (click)="showFactusPanel = !showFactusPanel" *ngIf="generatedInvoice && !factusResultado?.exito">
+        Factura Electrónica DIAN
+      </button>
       <button class="btn-primary" (click)="closeConfirmModal()">
         Aceptar
       </button>
     </div>
+
+    <!-- Panel FACTUS -->
+    <div class="factus-panel" *ngIf="showFactusPanel && !factusResultado?.exito">
+      <h4>Datos del Comprador — Factura Electrónica DIAN</h4>
+
+      <div class="factus-form">
+        <div class="factus-row">
+          <div class="factus-field">
+            <label>Tipo de Documento</label>
+            <select [(ngModel)]="factusForm.tipoDocumento" class="factus-select">
+              <option value="13">Cédula de Ciudadanía (CC)</option>
+              <option value="31">NIT</option>
+            </select>
+          </div>
+          <div class="factus-field">
+            <label>Número de Documento *</label>
+            <input type="text" [(ngModel)]="factusForm.numeroDocumento"
+                   class="factus-input" placeholder="Ej: 1234567890">
+          </div>
+          <div class="factus-field" *ngIf="factusForm.tipoDocumento === '31'">
+            <label>Dígito de Verificación</label>
+            <input type="text" [(ngModel)]="factusForm.digitoVerificacion"
+                   class="factus-input" placeholder="Ej: 5" maxlength="1">
+          </div>
+        </div>
+
+        <div class="factus-row">
+          <div class="factus-field factus-field--wide">
+            <label>Nombre / Razón Social *</label>
+            <input type="text" [(ngModel)]="factusForm.nombreComprador"
+                   class="factus-input" placeholder="Nombre completo o razón social">
+          </div>
+          <div class="factus-field">
+            <label>Teléfono</label>
+            <input type="text" [(ngModel)]="factusForm.telefono"
+                   class="factus-input" placeholder="Ej: 3001234567">
+          </div>
+        </div>
+
+        <div class="factus-row">
+          <div class="factus-field factus-field--wide">
+            <label>Correo Electrónico</label>
+            <input type="email" [(ngModel)]="factusForm.emailComprador"
+                   class="factus-input" placeholder="correo@ejemplo.com">
+          </div>
+          <div class="factus-field factus-field--wide">
+            <label>Dirección</label>
+            <input type="text" [(ngModel)]="factusForm.direccion"
+                   class="factus-input" placeholder="Dirección del comprador">
+          </div>
+        </div>
+
+        <button class="btn-emitir-factus"
+                (click)="emitirFacturaElectronica()"
+                [disabled]="facturandoElectronica">
+          <span *ngIf="!facturandoElectronica">Emitir Factura Electrónica</span>
+          <span *ngIf="facturandoElectronica">Emitiendo...</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Resultado FACTUS -->
+    <div class="factus-resultado factus-resultado--exito" *ngIf="factusResultado?.exito">
+      <div class="factus-resultado__titulo">Factura Electrónica Emitida</div>
+      <div class="factus-resultado__fila" *ngIf="factusResultado?.numeroFactura">
+        <span>N° Factura DIAN:</span>
+        <strong>{{ factusResultado?.numeroFactura }}</strong>
+      </div>
+      <div class="factus-resultado__cufe" *ngIf="factusResultado?.cufe">
+        <span>CUFE:</span>
+        <code>{{ factusResultado?.cufe }}</code>
+      </div>
+    </div>
+
+    <div class="factus-resultado factus-resultado--error" *ngIf="factusResultado && !factusResultado.exito">
+      <div class="factus-resultado__titulo">Error al emitir factura electrónica</div>
+      <p>{{ factusResultado.mensaje }}</p>
+      <button class="btn-factus" (click)="factusResultado = null; showFactusPanel = true">Reintentar</button>
+    </div>
+
   </div>
 </div>

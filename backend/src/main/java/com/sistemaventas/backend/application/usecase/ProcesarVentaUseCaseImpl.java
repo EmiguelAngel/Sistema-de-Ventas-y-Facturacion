@@ -25,12 +25,12 @@ import com.sistemaventas.backend.domain.ports.out.PagoRepositoryPort;
 import com.sistemaventas.backend.domain.ports.out.ProductoRepositoryPort;
 import com.sistemaventas.backend.domain.ports.out.UsuarioRepositoryPort;
 import com.sistemaventas.backend.domain.ports.out.VentaRepositoryPort;
-import com.sistemaventas.backend.dto.request.VentaRequest;
-import com.sistemaventas.backend.dto.response.VentaResponse;
+import com.sistemaventas.backend.infrastructure.web.dto.request.VentaRequest;
+import com.sistemaventas.backend.infrastructure.web.dto.response.VentaResponse;
 import com.sistemaventas.backend.infrastructure.persistence.entity.DetalleFacturaJpaEntity;
 import com.sistemaventas.backend.infrastructure.persistence.entity.FacturaJpaEntity;
 import com.sistemaventas.backend.infrastructure.persistence.repository.FacturaJpaRepository;
-import com.sistemaventas.backend.service.FacturaPdfService;
+import com.sistemaventas.backend.infrastructure.pdf.FacturaPdfService;
 
 /**
  * Caso de Uso — Procesamiento de Ventas.
@@ -234,7 +234,7 @@ public class ProcesarVentaUseCaseImpl implements ProcesarVentaUseCase {
                 .orElseThrow(() -> new FacturaNoEncontradaException(idFactura));
 
         // Adaptar PagoDomain a la entidad JPA Pago legacy para VentaResponse
-        com.sistemaventas.backend.entity.Pago legacyPago = new com.sistemaventas.backend.entity.Pago();
+        com.sistemaventas.backend.infrastructure.web.dto.legacy.Pago legacyPago = new com.sistemaventas.backend.infrastructure.web.dto.legacy.Pago();
         legacyPago.setIdPago(pago.getId());
         legacyPago.setMetodoPago(pago.getMetodoPago());
         legacyPago.setMonto(pago.getMonto());
@@ -243,12 +243,12 @@ public class ProcesarVentaUseCaseImpl implements ProcesarVentaUseCase {
         legacyPago.setNombreTitular(pago.getNombreTitular());
         legacyPago.setNumeroTarjeta(pago.getNumeroTarjeta());
 
-        com.sistemaventas.backend.entity.Factura legacyFactura = toLegacyFactura(facturaEntity);
+        com.sistemaventas.backend.infrastructure.web.dto.legacy.Factura legacyFactura = toLegacyFactura(facturaEntity);
         return new VentaResponse(legacyFactura, legacyPago);
     }
 
-    private com.sistemaventas.backend.entity.Factura toLegacyFactura(FacturaJpaEntity e) {
-        com.sistemaventas.backend.entity.Factura f = new com.sistemaventas.backend.entity.Factura();
+    private com.sistemaventas.backend.infrastructure.web.dto.legacy.Factura toLegacyFactura(FacturaJpaEntity e) {
+        com.sistemaventas.backend.infrastructure.web.dto.legacy.Factura f = new com.sistemaventas.backend.infrastructure.web.dto.legacy.Factura();
         f.setIdFactura(e.getIdFactura());
         f.setFecha(e.getFecha());
         f.setSubtotal(e.getSubtotal());
@@ -256,26 +256,26 @@ public class ProcesarVentaUseCaseImpl implements ProcesarVentaUseCase {
         f.setTotal(e.getTotal());
         f.setIdPago(e.getIdPago());
         if (e.getUsuario() != null) {
-            com.sistemaventas.backend.entity.Usuario usuario = new com.sistemaventas.backend.entity.Usuario();
+            com.sistemaventas.backend.infrastructure.web.dto.legacy.Usuario usuario = new com.sistemaventas.backend.infrastructure.web.dto.legacy.Usuario();
             usuario.setIdUsuario(e.getUsuario().getIdUsuario());
             usuario.setNombre(e.getUsuario().getNombre());
             usuario.setCorreo(e.getUsuario().getCorreo());
             f.setUsuario(usuario);
         }
 
-        List<com.sistemaventas.backend.entity.DetalleFactura> detalles = new ArrayList<>();
+        List<com.sistemaventas.backend.infrastructure.web.dto.legacy.DetalleFactura> detalles = new ArrayList<>();
         if (e.getDetallesFactura() != null) {
             for (DetalleFacturaJpaEntity d : e.getDetallesFactura()) {
-                com.sistemaventas.backend.entity.DetalleFactura legacyDetalle =
-                        new com.sistemaventas.backend.entity.DetalleFactura();
+                com.sistemaventas.backend.infrastructure.web.dto.legacy.DetalleFactura legacyDetalle =
+                        new com.sistemaventas.backend.infrastructure.web.dto.legacy.DetalleFactura();
                 legacyDetalle.setIdDetalle(d.getIdDetalle());
                 legacyDetalle.setCantidad(d.getCantidad());
                 legacyDetalle.setPrecioUnitario(d.getPrecioUnitario());
                 legacyDetalle.setSubtotal(d.getSubtotal());
 
                 if (d.getProducto() != null) {
-                    com.sistemaventas.backend.entity.Producto legacyProducto =
-                            new com.sistemaventas.backend.entity.Producto();
+                    com.sistemaventas.backend.infrastructure.web.dto.legacy.Producto legacyProducto =
+                            new com.sistemaventas.backend.infrastructure.web.dto.legacy.Producto();
                     legacyProducto.setIdProducto(d.getProducto().getIdProducto());
                     legacyProducto.setDescripcion(d.getProducto().getDescripcion());
                     legacyProducto.setPrecioUnitario(d.getProducto().getPrecioUnitario());

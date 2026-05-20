@@ -1,6 +1,6 @@
 package com.sistemaventas.backend.domain.ports.out;
 
-import com.sistemaventas.backend.dto.DevolucionDTO;
+import com.sistemaventas.backend.infrastructure.web.dto.DevolucionDTO;
 
 import java.util.List;
 import java.util.Optional;

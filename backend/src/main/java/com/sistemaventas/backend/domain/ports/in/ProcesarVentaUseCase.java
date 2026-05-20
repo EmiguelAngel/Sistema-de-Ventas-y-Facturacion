@@ -1,7 +1,7 @@
 package com.sistemaventas.backend.domain.ports.in;
 
-import com.sistemaventas.backend.dto.request.VentaRequest;
-import com.sistemaventas.backend.dto.response.VentaResponse;
+import com.sistemaventas.backend.infrastructure.web.dto.request.VentaRequest;
+import com.sistemaventas.backend.infrastructure.web.dto.response.VentaResponse;
 
 import java.util.List;
 import java.util.Optional;

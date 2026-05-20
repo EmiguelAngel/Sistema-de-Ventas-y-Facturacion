@@ -11,6 +11,7 @@ import { ProductService } from '../../../core/services/product.service';
 import { CartService } from '../../../core/services/cart.service';
 import { SalesService } from '../../../core/services/sales.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { FactusService, FactusEmitirResponse } from '../../../core/services/factus.service';
 import { Product, CartItem, CreateSaleRequest, Invoice, InvoiceDetail, Payment } from '../../../core/models';
 import { CATEGORIES, PAYMENT_METHODS, MESSAGES } from '../../../core/constants/app.constants';
 import { environment } from '../../../../environments/environment';
@@ -61,11 +62,26 @@ export class PosComponent implements OnInit {
   showConfirmModal = false;
   generatedInvoice: Invoice | null = null;
 
+  // FACTUS — Facturación electrónica
+  showFactusPanel = false;
+  facturandoElectronica = false;
+  factusResultado: FactusEmitirResponse | null = null;
+  factusForm = {
+    tipoDocumento: '13' as '13' | '31',
+    numeroDocumento: '',
+    nombreComprador: '',
+    emailComprador: '',
+    direccion: '',
+    digitoVerificacion: '',
+    telefono: ''
+  };
+
   constructor(
     private productService: ProductService,
     private cartService: CartService,
     private salesService: SalesService,
     private authService: AuthService,
+    private factusService: FactusService,
     private http: HttpClient
   ) {}
 
@@ -519,6 +535,58 @@ export class PosComponent implements OnInit {
   closeConfirmModal(): void {
     this.showConfirmModal = false;
     this.generatedInvoice = null;
+    this.showFactusPanel = false;
+    this.facturandoElectronica = false;
+    this.factusResultado = null;
+    this.factusForm = {
+      tipoDocumento: '13',
+      numeroDocumento: '',
+      nombreComprador: '',
+      emailComprador: '',
+      direccion: '',
+      digitoVerificacion: '',
+      telefono: ''
+    };
+  }
+
+  /**
+   * Emitir factura electrónica DIAN via FACTUS
+   */
+  emitirFacturaElectronica(): void {
+    if (!this.generatedInvoice?.idFactura) return;
+    if (!this.factusForm.numeroDocumento.trim() || !this.factusForm.nombreComprador.trim()) {
+      this.showError('Número de documento y nombre del comprador son obligatorios');
+      return;
+    }
+
+    this.facturandoElectronica = true;
+    this.factusResultado = null;
+
+    this.factusService.emitir({
+      idFactura: this.generatedInvoice.idFactura,
+      tipoDocumento: this.factusForm.tipoDocumento,
+      numeroDocumento: this.factusForm.numeroDocumento.trim(),
+      nombreComprador: this.factusForm.nombreComprador.trim(),
+      emailComprador: this.factusForm.emailComprador.trim() || undefined,
+      direccion: this.factusForm.direccion.trim() || undefined,
+      digitoVerificacion: this.factusForm.digitoVerificacion.trim() || undefined,
+      telefono: this.factusForm.telefono.trim() || undefined
+    }).subscribe({
+      next: (res) => {
+        this.facturandoElectronica = false;
+        this.factusResultado = res;
+      },
+      error: (err) => {
+        this.facturandoElectronica = false;
+        this.factusResultado = {
+          exito: false,
+          cufe: null,
+          numeroFactura: null,
+          mensaje: err.error?.mensaje || err.message || 'Error al conectar con FACTUS',
+          qrUrl: null
+        };
+      }
+    });
   }
 
   /**

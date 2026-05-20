@@ -1,7 +1,7 @@
 package com.sistemaventas.backend.domain.ports.in;
 
 import com.sistemaventas.backend.domain.model.Producto;
-import com.sistemaventas.backend.dto.request.ProductoRequest;
+import com.sistemaventas.backend.infrastructure.web.dto.request.ProductoRequest;
 
 /** Puerto de entrada — casos de uso de creación y modificación de Productos. */
 public interface CrearProductoUseCase {

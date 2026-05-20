@@ -2,7 +2,6 @@ package com.sistemaventas.backend.infrastructure.notification;
 
 import com.sistemaventas.backend.domain.model.Producto;
 import com.sistemaventas.backend.domain.ports.out.NotificacionPort;
-import com.sistemaventas.backend.observer.InventarioNotificationService;
 import org.springframework.stereotype.Component;
 
 /**

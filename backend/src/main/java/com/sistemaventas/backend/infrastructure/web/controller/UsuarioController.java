@@ -1,0 +1,221 @@
+package com.sistemaventas.backend.infrastructure.web.controller;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.sistemaventas.backend.domain.model.UsuarioDomain;
+import com.sistemaventas.backend.domain.ports.in.GestionarUsuarioUseCase;
+import com.sistemaventas.backend.infrastructure.web.dto.legacy.Usuario;
+
+import jakarta.validation.Valid;
+
+@RestController
+@RequestMapping("/api/usuarios")
+@CrossOrigin(origins = "http://localhost:4200")
+public class UsuarioController {
+
+    private final GestionarUsuarioUseCase usuarioUseCase;
+
+    public UsuarioController(GestionarUsuarioUseCase usuarioUseCase) {
+        this.usuarioUseCase = usuarioUseCase;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<Usuario>> obtenerTodosLosUsuarios() {
+        try {
+            List<Usuario> usuarios = usuarioUseCase.obtenerTodos().stream().map(this::toLegacyUsuario).toList();
+            return ResponseEntity.ok(usuarios);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Usuario> obtenerUsuarioPorId(@PathVariable Integer id) {
+        try {
+            Optional<Usuario> usuario = usuarioUseCase.buscarPorId(id).map(this::toLegacyUsuario);
+            return usuario.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/correo/{correo}")
+    public ResponseEntity<Usuario> obtenerUsuarioPorCorreo(@PathVariable String correo) {
+        try {
+            Optional<Usuario> usuario = usuarioUseCase.obtenerTodos().stream()
+                    .filter(u -> correo.equalsIgnoreCase(u.getCorreo()))
+                    .findFirst()
+                    .map(this::toLegacyUsuario);
+            return usuario.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping
+    public ResponseEntity<?> crearUsuario(@Valid @RequestBody Usuario usuario) {
+        try {
+            Usuario nuevoUsuario = toLegacyUsuario(usuarioUseCase.crear(toDomainUsuario(usuario)));
+            return ResponseEntity.status(HttpStatus.CREATED).body(nuevoUsuario);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> actualizarUsuario(@PathVariable Integer id,
+                                               @Valid @RequestBody Usuario usuario) {
+        try {
+            Usuario usuarioActualizado = toLegacyUsuario(usuarioUseCase.actualizar(id, toDomainUsuario(usuario)));
+            return ResponseEntity.ok(usuarioActualizado);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error: " + e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> eliminarUsuario(@PathVariable Integer id) {
+        try {
+            boolean eliminado = usuarioUseCase.eliminar(id);
+            if (eliminado) {
+                return ResponseEntity.ok().body("Usuario eliminado correctamente");
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error interno del servidor");
+        }
+    }
+
+    @GetMapping("/rol/{idRol}")
+    public ResponseEntity<List<Usuario>> obtenerUsuariosPorRol(@PathVariable Integer idRol) {
+        try {
+            List<Usuario> usuarios = usuarioUseCase.obtenerTodos().stream()
+                    .filter(u -> idRol.equals(u.getIdRol()))
+                    .map(this::toLegacyUsuario)
+                    .toList();
+            return ResponseEntity.ok(usuarios);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @GetMapping("/buscar")
+    public ResponseEntity<List<Usuario>> buscarPorNombre(@RequestParam String nombre) {
+        try {
+            String filtro = nombre.toLowerCase();
+            List<Usuario> usuarios = usuarioUseCase.obtenerTodos().stream()
+                    .filter(u -> u.getNombre() != null && u.getNombre().toLowerCase().contains(filtro))
+                    .map(this::toLegacyUsuario)
+                    .toList();
+            return ResponseEntity.ok(usuarios);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        try {
+            Optional<Usuario> usuario = usuarioUseCase.verificarCredenciales(
+                    loginRequest.getCorreo(),
+                    loginRequest.getContrasena()
+            ).map(this::toLegacyUsuario);
+
+            if (usuario.isPresent()) {
+                LoginResponse response = new LoginResponse();
+                response.setSuccess(true);
+                response.setMessage("Login exitoso");
+                response.setUser(usuario.get());
+                response.setToken("jwt_token_placeholder");
+                return ResponseEntity.ok().body(response);
+            } else {
+                ErrorResponse error = new ErrorResponse();
+                error.setSuccess(false);
+                error.setMessage("Credenciales incorrectas");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+        } catch (Exception e) {
+            ErrorResponse error = new ErrorResponse();
+            error.setSuccess(false);
+            error.setMessage("Error interno del servidor");
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+
+    public static class LoginRequest {
+        private String correo;
+        private String contrasena;
+        public LoginRequest() {}
+        public String getCorreo() { return correo; }
+        public void setCorreo(String correo) { this.correo = correo; }
+        public String getContrasena() { return contrasena; }
+        public void setContrasena(String contrasena) { this.contrasena = contrasena; }
+    }
+
+    public static class LoginResponse {
+        private boolean success;
+        private String message;
+        private Usuario user;
+        private String token;
+        public LoginResponse() {}
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+        public Usuario getUser() { return user; }
+        public void setUser(Usuario user) { this.user = user; }
+        public String getToken() { return token; }
+        public void setToken(String token) { this.token = token; }
+    }
+
+    public static class ErrorResponse {
+        private boolean success;
+        private String message;
+        public ErrorResponse() {}
+        public boolean isSuccess() { return success; }
+        public void setSuccess(boolean success) { this.success = success; }
+        public String getMessage() { return message; }
+        public void setMessage(String message) { this.message = message; }
+    }
+
+    private Usuario toLegacyUsuario(UsuarioDomain u) {
+        Usuario legacy = new Usuario();
+        legacy.setIdUsuario(u.getId());
+        legacy.setNombre(u.getNombre());
+        legacy.setCorreo(u.getCorreo());
+        legacy.setContrasena(u.getContrasena());
+        legacy.setTelefono(u.getTelefono());
+        legacy.setIdRol(u.getIdRol());
+        return legacy;
+    }
+
+    private UsuarioDomain toDomainUsuario(Usuario u) {
+        UsuarioDomain domain = new UsuarioDomain();
+        domain.setId(u.getIdUsuario());
+        domain.setNombre(u.getNombre());
+        domain.setCorreo(u.getCorreo());
+        domain.setContrasena(u.getContrasena());
+        domain.setTelefono(u.getTelefono());
+        domain.setIdRol(u.getIdRol());
+        return domain;
+    }
+}
